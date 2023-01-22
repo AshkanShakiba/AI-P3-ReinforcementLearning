@@ -24,7 +24,7 @@
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
-
+import sys
 
 import mdp, util
 
@@ -63,7 +63,23 @@ class ValueIterationAgent(ValueEstimationAgent):
 
     def runValueIteration(self):
         # Write value iteration code here
-        "*** YOUR CODE HERE ***"
+
+        iterations = self.iterations
+        while iterations:
+            current_value = util.Counter()
+            for state in self.mdp.getStates():
+                if not self.mdp.isTerminal(state):
+                    max_value = -sys.maxsize
+                    for action in self.mdp.getPossibleActions(state):
+                        action_value = 0
+                        for next_state, probability in self.mdp.getTransitionStatesAndProbs(state, action):
+                            reward = self.mdp.getReward(state, action, next_state)
+                            action_value += probability * (reward + self.discount * self.values[next_state])
+                        if action_value > max_value:
+                            max_value = action_value
+                    current_value[state] = max_value
+            self.values = current_value
+            iterations -= 1
 
     def getValue(self, state):
         """
@@ -76,8 +92,12 @@ class ValueIterationAgent(ValueEstimationAgent):
         Compute the Q-value of action in state from the
         value function stored in self.values.
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        action_value = 0
+        for next_state, probability in self.mdp.getTransitionStatesAndProbs(state, action):
+            reward = self.mdp.getReward(state, action, next_state)
+            action_value += probability * (reward + self.discount * self.values[next_state])
+        return action_value
 
     def computeActionFromValues(self, state):
         """
@@ -88,8 +108,18 @@ class ValueIterationAgent(ValueEstimationAgent):
         there are no legal actions, which is the case at the
         terminal state, you should return None.
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        if self.mdp.isTerminal(state):
+            return None
+        else:
+            max_value = -sys.maxsize
+            best_action = self.mdp.getPossibleActions(state)[0]
+            for action in self.mdp.getPossibleActions(state):
+                Q_value = self.computeQValueFromValues(state, action)
+                if Q_value > max_value:
+                    max_value = Q_value
+                    best_action = action
+            return best_action
 
     def getPolicy(self, state):
         return self.computeActionFromValues(state)

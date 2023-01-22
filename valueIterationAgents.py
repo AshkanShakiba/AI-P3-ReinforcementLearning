@@ -197,4 +197,65 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
         ValueIterationAgent.__init__(self, mdp, discount, iterations)
 
     def runValueIteration(self):
-        "*** YOUR CODE HERE ***"
+        predecessors = dict()
+        states = self.mdp.getStates()
+
+        for state in states:
+            predecessors[state] = set()
+
+        for state in states:
+            actions = self.mdp.getPossibleActions(state)
+            for action in actions:
+                for next_state, probability in self.mdp.getTransitionStatesAndProbs(state, action):
+                    if probability != 0:
+                        predecessors[next_state].add(state)
+
+        queue = util.PriorityQueue()
+
+        for state in states:
+            if not self.mdp.isTerminal(state):
+                Q_values = list()
+                max_Q_value = -sys.maxsize
+                current = self.values[state]
+                for action in self.mdp.getPossibleActions(state):
+                    Q_value = self.computeQValueFromValues(state, action)
+                    Q_values.append(Q_value)
+                    if Q_value > max_Q_value:
+                        max_Q_value = Q_value
+
+                if current > max_Q_value:
+                    queue.update(state, max_Q_value - current)
+                else:
+                    queue.update(state, current - max_Q_value)
+
+        for i in range(self.iterations):
+            if queue.isEmpty():
+                return
+
+            state = queue.pop()
+            if not self.mdp.isTerminal(state):
+                values = list()
+                max_value = -sys.maxsize
+                for action in self.mdp.getPossibleActions(state):
+                    value = 0
+                    for next_state, probability in self.mdp.getTransitionStatesAndProbs(state, action):
+                        reward = self.mdp.getReward(state, action, next_state)
+                        next_Q_value = self.values[next_state]
+                        value += probability * (reward + self.discount * next_Q_value)
+                    values.append(value)
+                    if value > max_value:
+                        max_value = value
+                self.values[state] = max_value
+
+            for previous in predecessors[state]:
+                Q_values = list()
+                max_Q_value = -sys.maxsize
+                current = self.values[previous]
+                for action in self.mdp.getPossibleActions(previous):
+                    Q_value = self.computeQValueFromValues(previous, action)
+                    Q_values.append(Q_value)
+                    if Q_value > max_Q_value:
+                        max_Q_value = Q_value
+
+                if abs(current - max_Q_value) > self.theta:
+                    queue.update(previous, -abs(current - max_Q_value))
